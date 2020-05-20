@@ -35,15 +35,8 @@ Additional notes about working and design
 
 ## Getting Started
 ### Prerequisites
-1. This version uses following libraries:
-	import urllib2  
-	import re  
-	import os, sys  
-	import optparse  
-	import httplib
-
-2. Python 2.6 is required.
-
+1. Python 3.8~ is required.
+2. Run `python -m pip install -r requirements.txt`
 
 ### Things to take care of while using sparty
 Please take this into consideration:
@@ -103,6 +96,7 @@ Options:
 ## Authors
 
 * __Aditya K Sood__ - _Initial Work_ - [Twitter](https://twitter.com/adityaksood)
+* __Angus Johnston__ - _Python 3 Support_ - [Twitter](https://twitter.com/DakuTree)
 
 See also the list of [contributors](https://github.com/DakuTree/sparty/graphs/contributors) who participated in this project.
 
