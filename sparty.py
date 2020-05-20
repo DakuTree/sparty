@@ -162,7 +162,8 @@ sharepoint_check_forms = [
     'Forms/MyItems.aspx',
     'Forms/NewForm.aspx',
     'Pages/default.aspx',
-    'Pages/Forms/AllItems.aspx']
+    'Pages/Forms/AllItems.aspx'
+]
 
 sharepoint_check_catalog = [
     '_catalogs/masterpage/Forms/AllItems.aspx',
@@ -177,21 +178,28 @@ sharepoint_target_layout = []
 sharepoint_target_forms = []
 sharepoint_target_catalog = []
 
+DEFAULT_HEADERS = {
+    'MIME-Version'           : '4.0',
+    'User-Agent'             : 'MSFrontPage/4.0',
+    'X-Vermeer-Content-Type' : 'application/x-www-form-urlencoded',
+    'Connection'             : 'Keep-Alive'
+}
+
 # sparty banner
 
 def banner():
     print("\t---------------------------------------------------------------")
     sparty_banner = """
-    _|_|_|    _|_|_|     _|_|    _|_|_|    _|_|_|_|_|  _|      _|
-    _|        _|    _|  _|    _|  _|    _|      _|        _|  _|
-    _|_|    _|_|_|    _|_|_|_|  _|_|_|        _|          _|
-        _|  _|        _|    _|  _|    _|      _|          _|
-    _|_|_|    _|        _|    _|  _|    _|      _|          _|
+        _|_|_|    _|_|_|     _|_|    _|_|_|    _|_|_|_|_|  _|      _|
+        _|        _|    _|  _|    _|  _|    _|      _|        _|  _|
+        _|_|    _|_|_|    _|_|_|_|  _|_|_|        _|          _|
+            _|  _|        _|    _|  _|    _|      _|          _|
+        _|_|_|    _|        _|    _|  _|    _|      _|          _|
 
-    SPARTY : Sharepoint/Frontpage Security Auditing Tool!
-    Authored by: Aditya K Sood |{0kn0ck}@secniche.org  | 2013
-    Twitter:     @AdityaKSood
-    Powered by: SecNiche Security Labs !
+        SPARTY : Sharepoint/Frontpage Security Auditing Tool!
+        Authored by: Aditya K Sood |{0kn0ck}@secniche.org  | 2013
+        Twitter:     @AdityaKSood
+        Powered by: SecNiche Security Labs !
     """
     print(sparty_banner)
     print("\t--------------------------------------------------------------")
@@ -380,13 +388,6 @@ def dump_sharepoint_headers(name):
 # file uploading routine to upload file remotely on frontpage extensions
 
 def frontpage_rpc_check(name):
-    headers = {
-        'MIME-Version': '4.0',
-        'User-Agent': 'MSFrontPage/4.0',
-        'X-Vermeer-Content-Type': 'application/x-www-form-urlencoded',
-        'Connection': 'Keep-Alive'
-    }
-
     exp_target_list = [
         '_vti_bin/shtml.exe/_vti_rpc',
         '_vti_bin/shtml.dll/_vti_rpc'
@@ -417,7 +418,7 @@ def frontpage_rpc_check(name):
 
     print("[+] Sending HTTP POST request to retrieve software version - (%s)" % destination)
     try:
-        req = urllib2.Request(destination, data, headers)
+        req = urllib2.Request(destination, data, DEFAULT_HEADERS)
 
         response = urllib2.urlopen(req)
         if response.getcode() == 200:
@@ -441,13 +442,6 @@ def frontpage_rpc_check(name):
 
 
 def frontpage_service_listing(name):
-    headers = {
-        'MIME-Version': '4.0',
-        'User-Agent': 'MSFrontPage/4.0',
-        'X-Vermeer-Content-Type': 'application/x-www-form-urlencoded',
-        'Connection': 'Keep-Alive'
-    }
-
     service_target_list = [
         '_vti_bin/shtml.exe/_vti_rpc',
         '_vti_bin/shtml.dll/_vti_rpc'
@@ -468,7 +462,7 @@ def frontpage_service_listing(name):
     print("[+] Sending HTTP POST request to retrieve service listing  - (%s)" % destination)
     try:
         for entry in data:
-            req = urllib2.Request(destination, entry, headers)
+            req = urllib2.Request(destination, entry, DEFAULT_HEADERS)
             response = urllib2.urlopen(req)
             if response.getcode() == 200:
                 print("[+] target accepts the request - (%s) | (%s) !" % (entry, response.getcode()))
@@ -492,13 +486,6 @@ def frontpage_service_listing(name):
 
 
 def frontpage_config_check(name):
-    headers = {
-        'MIME-Version': '4.0',
-        'User-Agent': 'MSFrontPage/4.0',
-        'X-Vermeer-Content-Type': 'application/x-www-form-urlencoded',
-        'Connection': 'Keep-Alive'
-    }
-
     # running some standard commands to retrieve files and configuration checks
     # frontpage versions validated are: 3.0.2.1706 , 4.0.2.4715 , 5.0.2.4803, 5.0.2.2623 , 6.0.2.5420
     # version : major ver=n.minor ver=n.phase ver=n.verincr=v
@@ -521,7 +508,7 @@ def frontpage_config_check(name):
         destination = name + "/" + front_exp_target
         print("[+] Sending HTTP POST request to [open service | listing documents] - (%s)" % destination)
         try:
-            req = urllib2.Request(destination, item, headers)
+            req = urllib2.Request(destination, item, DEFAULT_HEADERS)
             response = urllib2.urlopen(req)
 
             if response.getcode() == 200:
@@ -545,13 +532,6 @@ def frontpage_config_check(name):
 # remove specific folder from the web server
 
 def frontpage_remove_folder(name):
-    headers = {
-        'MIME-Version': '4.0',
-        'User-Agent': 'MSFrontPage/4.0',
-        'X-Vermeer-Content-Type': 'application/x-www-form-urlencoded',
-        'Connection': 'Keep-Alive'
-    }
-
     # running some standard commands to remove "/" folder from the web server using author.dll
     # frontpage versions validated are: 3.0.2.1706 , 4.0.2.4715 , 5.0.2.4803, 5.0.2.2623 , 6.0.2.5420
 
@@ -568,7 +548,7 @@ def frontpage_remove_folder(name):
         destination = name + "/" + file_exp_target
         print("[+] Sending HTTP POST request to remove '/' directory to - (%s)" % destination)
         try:
-            req = urllib2.Request(destination, item, headers)
+            req = urllib2.Request(destination, item, DEFAULT_HEADERS)
             response = urllib2.urlopen(req)
             if response.getcode() == 200:
                 print("[+] folder removed successfully - (%s) | (%s) !\n" % (item, response.getcode()))
@@ -589,13 +569,6 @@ def frontpage_remove_folder(name):
 # file uploading through author.dll
 
 def file_upload_check(name):
-    headers = {
-        'MIME-Version': '4.0',
-        'User-Agent': 'MSFrontPage/4.0',
-        'X-Vermeer-Content-Type': 'application/x-www-form-urlencoded',
-        'Connection': 'Keep-Alive'
-    }
-
     # running some standard commands to upload file to  web server using author.dll
     # frontpage versions validated are: 3.0.2.1706 , 4.0.2.4715 , 5.0.2.4803, 5.0.2.2623 , 6.0.2.5420
 
@@ -613,7 +586,7 @@ def file_upload_check(name):
         destination = name + "/" + file_exp_target
         print("[+] Sending HTTP POST request for uploading file to - (%s)" % destination)
         try:
-            req = urllib2.Request(destination, item, headers)
+            req = urllib2.Request(destination, item, DEFAULT_HEADERS)
             response = urllib2.urlopen(req)
             if response.getcode() == 200:
                 print("[+] file uploaded successfully - (%s) | (%s) !\n" % (item, response.getcode()))
@@ -811,8 +784,13 @@ def main():
         sparty_usage()
         sys.exit(0)
 
+    except urllib2.HTTPError as h:
+        print("[-] HTTPError : %s" % h.code)
+        print("[+] please specify the target with protocol handlers as http | https")
+        sys.exit(0)
+
     except urllib2.URLError as u:
-        print("[-] URLError : %s" % u.code)
+        print("[-] URLError : %s" % u.args)
         print("[+] please specify the target with protocol handlers as http | https")
         sys.exit(0)
 
