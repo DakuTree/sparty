@@ -2,33 +2,8 @@
 # Sparty - Sharepoint/Frontend Auditor
 # By: Aditya K Sood - SecNiche Security Labs ! (c) 2013
 
-license = """
-Copyright (c) 2013, {Aditya K sood}
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright notice,
-      this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-      and/or other materials provided with the distribution.
-    * Neither the name of IOActive or SecNiche nor the names of its contributors
-      may be used to endorse or promote products derived from this software
-      without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-OF THE POSSIBILITY OF SUCH DAMAGE.
-"""
+__copyright__ = 'Copyright (c) 2013, {Aditya K Sood}'
+__license__   = 'BSD'
 
 import os, sys
 
@@ -64,11 +39,11 @@ sharepoint_target_catalog = []
 # verify whether the python libraries are imported successfully or not!
 
 try:
-	import urllib2
+    import urllib2
 except ImportError:
-	print "[-] program could not find module : urllib2" 
-	sys.exit (1)
-		
+    print "[-] program could not find module : urllib2"
+    sys.exit (1)
+
 try:
 	import re
 except ImportError:
@@ -101,12 +76,12 @@ def check_python():
 
 def banner():
         print "\t---------------------------------------------------------------"
-        sparty_banner = """                                                                 
-          _|_|_|    _|_|_|     _|_|    _|_|_|    _|_|_|_|_|  _|      _|  
-         _|        _|    _|  _|    _|  _|    _|      _|        _|  _|    
-           _|_|    _|_|_|    _|_|_|_|  _|_|_|        _|          _|      
-               _|  _|        _|    _|  _|    _|      _|          _|      
-         _|_|_|    _|        _|    _|  _|    _|      _|          _|      
+        sparty_banner = """
+          _|_|_|    _|_|_|     _|_|    _|_|_|    _|_|_|_|_|  _|      _|
+         _|        _|    _|  _|    _|  _|    _|      _|        _|  _|
+           _|_|    _|_|_|    _|_|_|_|  _|_|_|        _|          _|
+               _|  _|        _|    _|  _|    _|      _|          _|
+         _|_|_|    _|        _|    _|  _|    _|      _|          _|
 
         SPARTY : Sharepoint/Frontpage Security Auditing Tool!
         Authored by: Aditya K Sood |{0kn0ck}@secniche.org  | 2013
@@ -156,7 +131,7 @@ def target_information(name):
 
         except urllib2.HTTPError as h:
 		print "[-] url error occured - (%s)" % h.code
-		pass 
+		pass
 
 
 # audit function for scanning frontpage and sharepoint files
@@ -210,7 +185,7 @@ def dump_credentials(dest):
 
 
 
-# fingerprinting frontpage version using default files ! 
+# fingerprinting frontpage version using default files !
 
 def fingerprint_frontpage(name):
         enum_nix = ['_vti_bin/_vti_aut/author.exe','_vti_bin/_vti_adm/admin.exe','_vti_bin/shtml.exe']
@@ -306,7 +281,7 @@ def frontpage_rpc_check(name):
         data = "method= server version"
         #data="method=list+services:4.0.2.0000&service_name="
 	#for item in exploit_targets:
-	
+
         for item in exp_target_list:
                 destination = name + "/" + item
 
@@ -328,9 +303,9 @@ def frontpage_rpc_check(name):
                         pass
 
 
-	
+
                 print "[+] Sending HTTP POST request to retrieve software version - (%s)" %destination
-                try:	
+                try:
                         req = urllib2.Request(destination,data,headers)
 			response = urllib2.urlopen(req)
 			if response.getcode() == 200:
@@ -338,10 +313,10 @@ def frontpage_rpc_check(name):
        				filename = "__version__.txt" + ".html"
                                 version = open(filename, 'a')
                                 version.write(response.read())
-                                print "[+] check file for contents - (%s) \n" %filename 
+                                print "[+] check file for contents - (%s) \n" %filename
 			else:
 				print "[-] target fails to accept request - (%s) | (%s) !\n" %(data,response.getcode())
-                
+
 		except urllib2.URLError as e:
                         print "[-] url error, seems like authentication is required or server failed to handle request! - - %s" % e.code
 			pass
@@ -362,7 +337,7 @@ def frontpage_service_listing(name):
 
         service_target_list = ['_vti_bin/shtml.exe/_vti_rpc','_vti_bin/shtml.dll/_vti_rpc']
         data=['method=list+services:3.0.2.1076&service_name=','method=list+services:4.0.2.471&service_name=','method=list+services:4.0.2.0000&service_name=','method=list+services:5.0.2.4803&service_name=','method=list+services:5.0.2.2623&service_name=','method=list+services:6.0.2.5420&service_name=']
-       
+
         for item in service_target_list:
                 destination = name + "/" + item
 
@@ -376,8 +351,8 @@ def frontpage_service_listing(name):
                                 	filename = "__service-list__.txt" + entry + ".html"
                                 	service_list = open(filename, 'a')
                                 	service_list.write(response.read())
-					print "[+] check file for contents - (%s) \n" %filename 
-                                	
+					print "[+] check file for contents - (%s) \n" %filename
+
                         	else:
                                 	print "[-] target fails to accept request - (%s) | (%s) !\n" %(data,response.getcode())
 
@@ -406,7 +381,7 @@ def frontpage_config_check(name):
 
         front_exp_target = '_vti_bin/_vti_aut/author.dll'
         payloads = ['method=open service:3.0.2.1706&service_name=/', 'method=list documents:3.0.2.1706&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=','method=getdocument:3.0.2.1105&service_name=&document_name=about/default.htm&old_theme_html=false&force=true&get_option=none&doc_version=','method=open service:4.0.2.4715&service_name=/', 'method=list documents:4.0.2.4715&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=','method=getdocument:4.0.2.4715&service_name=&document_name=about/default.htm&old_theme_html=false&force=true&get_option=none&doc_version=','method=open service:5.0.2.4803&service_name=/', 'method=list documents:5.0.2.4803&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=','method=getdocument:5.0.2.4803&service_name=&document_name=about/default.htm&old_theme_html=false&force=true&get_option=none&doc_version=','method=open service:5.0.2.2623&service_name=/', 'method=list documents:5.0.2.2623&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=','method=getdocument:5.0.2.2623&service_name=&document_name=about/default.htm&old_theme_html=false&force=true&get_option=none&doc_version=','method=open service:6.0.2.5420&service_name=/', 'method=list documents:6.0.2.5420&service_name=&listHiddenDocs=false&listExplorerDocs=false&listRecurse=false&listFiles=true&listFolders=true&listLinkInfo=false&listIncludeParent=true&listDerivedT=false&listBorders=false&initialUrl=','method=getdocument:6.0.2.5420&service_name=&document_name=about/default.htm&old_theme_html=false&force=true&get_option=none&doc_version=']
-        
+
 
         for item in payloads:
                 destination = name + "/" + front_exp_target
@@ -507,13 +482,13 @@ def file_upload_check(name):
                         pass
 
 
-                                                           
+
 # main routine to trigger sub routines (functions) !
 
 def main():
 	check_python()
 	banner()
-	
+
 	parser = optparse.OptionParser(usage="usage: %prog [options]", version="%prog 1.0")
 	front_page = optparse.OptionGroup(parser,"Frontpage:")
 	share_point = optparse.OptionGroup(parser,"Sharepoint:")
@@ -524,23 +499,23 @@ def main():
 	mandatory.add_option("-u","--url", type="string" , help="target url to scan with proper structure", dest="url")
 	front_page.add_option("-f", "--frontpage", type="choice", choices=['pvt' ,'bin'], help="<FRONTPAGE = pvt | bin> -- to check access permissions on frontpage standard files in vti or bin directory!", dest="frontpage")
 	share_point.add_option("-s","--sharepoint", type="choice", choices=['forms','layouts','catalog'], help="<SHAREPOINT = forms | layouts | catalog> -- to check access permissions on sharepoint standard files in forms or layouts or catalog directory!", dest="sharepoint")
-	
+
 	exploit.add_option("-v","--http_fingerprint", type="choice", choices=['ms_sharepoint','ms_frontpage'], help="<FINGERPRINT = ms_sharepoint | ms_frontpage> -- fingerprint sharepoint or frontpage based on HTTP headers!" , dest="fingerprint")
 	exploit.add_option("-d","--dump", type="choice", choices=['dump', 'extract'] , help="<DUMP = dump | extract> -- dump credentials from default sharepoint and frontpage files (configuration errors and exposed entries)!", dest="dump")
 	exploit.add_option("-l","--list", type="choice", choices=['list','index'], help="<DIRECTORY = list | index> -- check directory listing and permissions!", dest="directory")
 	exploit.add_option("-e","--exploit", type="choice", choices=['rpc_version_check','rpc_service_listing', 'author_config_check','rpc_file_upload','author_remove_folder'], help="EXPLOIT = <rpc_version_check | rpc_service_listing | rpc_file_upload | author_config_check | author_remove_folder> -- exploit vulnerable installations by checking RPC querying, service listing and file uploading", dest="exploit")
 	exploit.add_option("-i","--services", type="choice", choices=['serv','services'], help="SERVICES = <serv | services> -- checking exposed services !", dest="services")
 	general.add_option("-x","--examples", type="string",help="running usage examples !", dest="examples")
-	
+
  	parser.add_option_group(front_page)
 	parser.add_option_group(share_point)
 	parser.add_option_group(mandatory)
         parser.add_option_group(exploit)
 	parser.add_option_group(general)
-   
+
 	options, arguments = parser.parse_args()
 
-	try:    
+	try:
 		target = options.url
 		if target is not None:
 			target_information(target)
@@ -562,7 +537,7 @@ def main():
                         print "[+]-------------------------------------------------------------------------!\n"
 			frontpage_rpc_check(target)
 			module_success("module RPC version check")
-			return 
+			return
 
 		elif options.exploit == "rpc_service_listing":
                         print "\n[+]-----------------------------------------------------------------------!"
@@ -579,7 +554,7 @@ def main():
                         frontpage_config_check(target)
                         module_success("module RPC check")
                         return
-		
+
 		elif options.exploit == "author_remove_folder":
                         print "\n[+]-----------------------------------------------------------------------!"
                         print "[+] trying to remove folder from web server                                 !"
@@ -612,13 +587,13 @@ def main():
 			return
 
 		elif options.frontpage == "bin":
-			build_target(target,front_bin,refine_target)		
+			build_target(target,front_bin,refine_target)
 			print "\n[+]----------------------------------------!"
 			print "[+] auditing frontpage '/_vti_bin/' directory!"
 			print "[+]------------------------------------------!\n"
 			audit(refine_target)
 			module_success("bin file access")
-		
+
 		elif options.frontpage == "pvt":
 			build_target(target,front_pvt,pvt_target)
 			print "\n[+]---------------------------------------------------------!"
@@ -630,14 +605,14 @@ def main():
 
 		elif options.fingerprint == "ms_sharepoint":
 			dump_sharepoint_headers(target)
-			print "\n[+] sharepoint fingerprinting module completed !\n"	
+			print "\n[+] sharepoint fingerprinting module completed !\n"
 			return
 
 
 		elif options.fingerprint == "ms_frontpage":
 			fingerprint_frontpage(target)
-			print "\n[+] frontpage fingerprinting module completed !\n" 
-			return		
+			print "\n[+] frontpage fingerprinting module completed !\n"
+			return
 
 		elif options.sharepoint == "layouts":
 			build_target(target,sharepoint_check_layout,sharepoint_target_layout)
@@ -657,7 +632,7 @@ def main():
 			module_success("forms file access")
 			return
 
-		elif options.sharepoint == "catalog":	
+		elif options.sharepoint == "catalog":
 			build_target(target,sharepoint_check_catalog,sharepoint_target_catalog)
                         print "\n[+]--------------------------------------------------------------!"
                         print "[+] auditing sharepoint '/catalog/' directory for access permissions !"
@@ -684,34 +659,33 @@ def main():
 	except ValueError as v:
 		print "[-] ValueError occurred. Improper option argument or url!"
 		print "[+] check for help (-h) for more details!"
-		sys.exit(0) 
+		sys.exit(0)
 
-	
+
 	except TypeError as t:
 		print "[-] TypeError occcured. Missing option argument or url!"
 		print "[+] check for help (-h) for more details!"
 		sys.exit(0)
-		
-	
+
+
 	except IndexError as e:
 		sparty_usage()
 		sys.exit(0)
-		
+
 	except urllib2.URLError as u:
 		print "[-] URLError : %s" %u.code
 		print "[+] please specify the target with protocol handlers as http | https"
 		sys.exit(0)
 
-	
+
 	except KeyboardInterrupt:
 		print "[-] halt signal detected, exiting the program !\n"
 		sys.exit(0)
 
-	
+
 	except None:
 		print "[] Hey"
 		sys.exit(0)
 # calling main
 if __name__ =='__main__':
 	main()
-
